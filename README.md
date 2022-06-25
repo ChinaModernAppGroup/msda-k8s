@@ -1,6 +1,6 @@
 # MSDA K8S iAppLX
 
-This iApp is an example of accessing tmsh.  The iApp itself is very simple - it manages the members of a pool.
+This is an example of MSDA to work with Kubernetes. MSDA-k8s agent will poll k8s service endpoints and configure LTM pool in BIG-IP. It will use client certificate for authentication.
 
 ## Build (requires rpmbuild)
 
@@ -9,9 +9,10 @@ This iApp is an example of accessing tmsh.  The iApp itself is very simple - it 
 Build output is an RPM package.
 
 ## Using IAppLX from BIG-IP UI
-If you are using BIG-IP, install f5-iappslx-basic-pool RPM package using iApps->Package Management LX->Import screen. To create an application, use iApps-> Templates LX -> Application Services -> Applications LX -> Create screen. Default IApp LX UI will be rendered based on the input properties specified in basic pool IAppLX.
+If you are using BIG-IP, install f5-iapplx-msda-k8s RPM package using iApps->Package Management LX->Import screen. 
+To create an application, use iApps-> Templates LX -> Application Services -> Applications LX -> Create screen. 
+Default IApp LX UI will be rendered based on the input properties specified in basic pool IAppLX.
 
-Pool name is mandatory when creating or updating iAppLX configuration. Optionally you can add any number of pool members.
 
 ## Create the base64 encodng certificate for authentication
 
@@ -234,8 +235,7 @@ Save the JSON to block.json and use it in the curl call. Refer to the clouddoc l
 }
 ```
 
-Post the block REST container using curl. Note you need to be running REST container for this step
-and it needs to listening at port 8433
+Post the block REST container using curl. 
 ```bash
-curl -sk -X POST -d @block.json https://localhost:8443/mgmt/shared/iapp/blocks
+curl -sk -X POST -d @block.json https://bigip_mgmt_ip:8443/mgmt/shared/iapp/blocks
 ```
