@@ -9,9 +9,10 @@ This iApp is an example of accessing tmsh.  The iApp itself is very simple - it 
 Build output is an RPM package.
 
 ## Using IAppLX from BIG-IP UI
-If you are using BIG-IP, install f5-iappslx-basic-pool RPM package using iApps->Package Management LX->Import screen. To create an application, use iApps-> Templates LX -> Application Services -> Applications LX -> Create screen. Default IApp LX UI will be rendered based on the input properties specified in basic pool IAppLX.
+If you are using BIG-IP, install f5-iapplx-msda-k8s RPM package using iApps->Package Management LX->Import screen. 
+To create an application, use iApps-> Templates LX -> Application Services -> Applications LX -> Create screen. 
+Default IApp LX UI will be rendered based on the input properties specified in basic pool IAppLX.
 
-Pool name is mandatory when creating or updating iAppLX configuration. Optionally you can add any number of pool members.
 
 ## Create the base64 encodng certificate for authentication
 
