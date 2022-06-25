@@ -1,6 +1,6 @@
 # MSDA K8S iAppLX
 
-This iApp is an example of accessing tmsh.  The iApp itself is very simple - it manages the members of a pool.
+This is an example of MSDA to work with Kubernetes. MSDA-k8s agent will poll k8s service endpoints and configure LTM pool in BIG-IP. It will use client certificate for authentication.
 
 ## Build (requires rpmbuild)
 
