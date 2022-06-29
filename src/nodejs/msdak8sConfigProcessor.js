@@ -14,6 +14,8 @@
   
   Updated by Ping Xiong on May/13/2022.
   Updated by Ping Xiong on Jun/24/2022 to modify the pool creation strategy.
+  Updated by Ping Xiong on Jun/29/2022 to modify the pool creation strategy, create empty pool if service does not exist.
+  Updated by Ping Xiong on Jun/30/2022 to fix the polling bug.
 */
 
 'use strict';
@@ -27,10 +29,11 @@ var K8s = require('k8s');
 var fs = require('fs');
 
 // Setup a pooling signal for audit.
-const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
+//const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
+global.msdak8sOnPolling = [];
 
 //const pollInterval = 10000; // Interval for polling Registry registry.
-var stopPolling = false;
+//var stopPolling = false;
 
 var poolMembers = '{100.100.100.100:8080 100.100.100.101:8080}';
 
@@ -62,6 +65,7 @@ msdak8sConfigProcessor.prototype.onStart = function (success) {
         restHelper: this.restHelper
     });
 
+    /*
     // Clear the polling signal for audit.
     try {
         fs.access(msdak8sOnPollingSignal, fs.constants.F_OK, function (err) {
@@ -75,6 +79,7 @@ msdak8sConfigProcessor.prototype.onStart = function (success) {
     } catch(err) {
         logger.fine("MSDAk8s: OnStart, hits error while check pooling signal. ", err.message);
     }
+    */
 
     success();
 };
@@ -95,6 +100,7 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
 
     var inputProperties;
     var dataProperties;
+    
     try {
         configTaskState = configTaskUtil.getAndValidateConfigTaskState(restOperation);
         blockState = configTaskState.block;
@@ -145,6 +151,22 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
     const inputMonitor = inputProperties.healthMonitor.value;
     var pollInterval = dataProperties.pollInterval.value * 1000;
 
+    // Check the existence of the pool in BIG-IP, create an empty pool if the pool doesn't exist.
+    mytmsh.executeCommand("tmsh -a list ltm pool " + inputPoolName)
+    .then(function () {
+        logger.fine("MSDA: onPost, found the pool, no need to create an empty pool.");
+        return;
+    }, function (error) {
+        logger.fine("MSDA: onPost, GET of pool failed, adding an empty pool: " + inputPoolName);
+        let inputEmptyPoolConfig = inputPoolName + ' monitor ' + inputMonitor + ' load-balancing-mode ' + inputPoolType + ' members none';
+        let commandCreatePool = 'tmsh -a create ltm pool ' + inputEmptyPoolConfig;
+        return mytmsh.executeCommand(commandCreatePool);
+    })
+        // Error handling - Set the block as 'ERROR'
+    .catch(function (error) {
+        logger.fine("MSDA: onPost, list pool failed: " + error.message);
+    });
+
     // Set the polling interval
     if (pollInterval) {
         if (pollInterval < 10000) {
@@ -157,16 +179,22 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
     }
     
     // Setup the polling signal for audit
+    global.msdak8sOnPolling.push(inputPoolName);
+    logger.fine("MSDA onPost: msdak8sOnpolling: ", global.msdak8sOnPolling);
+
+
+    /*
     try {
         logger.fine("MSDAk8s: onPost, will set the polling signal. ");
         fs.writeFile(msdak8sOnPollingSignal, '');
     } catch (error) {
         logger.fine("MSDAk8s: onPost, hit error while set polling signal: ", error.message);
     }
+    */
 
     logger.fine("MSDA: onPost, Input properties accepted, change to BOUND status, start to poll Registry.");
 
-    stopPolling = false;
+    //stopPolling = false;
 
     configTaskUtil.sendPatchToBoundState(configTaskState, 
             oThis.getUri().href, restOperation.getBasicAuthorization());
@@ -231,14 +259,13 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
                             .catch(function (error) {
                                 logger.fine("MSDA: onPost, Add Failure: adding/modifying a pool: " + error.message);
                             });
-
                     } else {
                         //To clear the pool
-                        console.log("MSDA: onPost, endpoint list is empty, will clear the BIG-IP pool as well");
-                        mytmsh.executeCommand("tmsh -a list ltm pool " + inputProperties.poolName.value)
+                        logger.fine("MSDA: onPost, endpoint list is empty, will clear the BIG-IP pool as well");
+                        mytmsh.executeCommand("tmsh -a list ltm pool " + inputPoolName)
                             .then(function () {
                                 logger.fine("MSDA: onPost, found the pool, will delete all members as it's empty.");
-                                let commandUpdatePool = 'tmsh -a modify ltm pool ' + inputProperties.poolName.value + ' members delete { all}';
+                                let commandUpdatePool = 'tmsh -a modify ltm pool ' + inputPoolName + ' members delete { all}';
                                 return mytmsh.executeCommand(commandUpdatePool)
                                     .then(function (response) {
                                         logger.fine("MSDA: onPost, update the pool to delete all members as it's empty. ");
@@ -263,7 +290,9 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
         }, pollInterval);
 
         // stop polling while undeployment
-        if (stopPolling) {
+        if (global.msdak8sOnPolling.includes(inputPoolName)) {
+            logger.fine("MSDA: onPost, keep polling registry ...");            
+        } else {
             process.nextTick(() => {
                 clearTimeout(pollRegistry);
                 logger.fine("MSDA: onPost/stopping, Stop polling registry ...");
@@ -281,7 +310,6 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
                 });
             }, 2000);
         }
-
     })();
 };
 
@@ -321,6 +349,11 @@ msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
     // device, setup remote hostname, HTTPS port and device group name
     // to be used for identified requests
 
+    // Delete the polling signal
+    let signalIndex = global.msdak8sOnPolling.indexOf(inputProperties.poolName.value);
+    global.msdak8sOnPolling.splice(signalIndex,1);
+
+
     // Use tmsh to update configuration
 
     mytmsh.executeCommand("tmsh -a list ltm pool " + inputProperties.poolName.value)
@@ -346,12 +379,14 @@ msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
                 oThis.getUri().href, restOperation.getBasicAuthorization());
         });
         // Always called, no matter the disposition. Also handles re-throwing internal exceptions.
-    // Stop polling registry while undeploy ??
+
+/*        // Stop polling registry while undeploy ??
     process.nextTick(() => {
         stopPolling = true;
         logger.fine("MSDA: onDelete/stopping, Stop polling registry ...");
     });
     //stopPollingEvent.emit('stopPollingRegistry');
+    */
     logger.fine("MSDA: onDelete, Stop polling Registry while ondelete action.");
 };
 

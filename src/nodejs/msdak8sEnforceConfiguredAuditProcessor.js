@@ -26,7 +26,7 @@ var logger = require("f5-logger").getInstance();
 var fs = require('fs');
 
 // Setup a signal for onpolling status. It has an initial state "false".
-const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
+//const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
 var msdaOnPolling = false;
 
 
@@ -82,35 +82,43 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         logger.fine(getLogHeader() + "Incoming properties: " +
             this.restHelper.jsonPrinter(auditTaskState.currentInputProperties));
         
-        
+        */
         var blockInputProperties = blockUtil.getMapFromPropertiesAndValidate(
             auditTaskState.currentInputProperties,
             ["k8sEndpoint", "authenticationCert", "nameSpace", "serviceName", "poolName", "poolType", "healthMonitor"]
         );
         
-        */
         // Check the polling state, trigger ConfigProcessor if needed.
         // Move the signal checking here
         logger.fine('MSDA K8S Audit: msdaOnpolling: ', msdaOnPolling);
-        fs.access(msdak8sOnPollingSignal, fs.constants.F_OK, function (err) {
-            if (err) {
-                logger.fine('MSDA K8S Audit: Checking polling signal hits error: ', err.message);
-                logger.fine("MSDA k8s audit onPost: ConfigProcessor is NOT on polling state, will set msdaOnpolling status to FALSE.");
-                msdaOnPolling = false;
-                try {
-                    var poolNameObject = getObjectByID("poolName", auditTaskState.currentInputProperties);
-                    poolNameObject.value = null;
-                    oThis.finishOperation(restOperation, auditTaskState);
-                    logger.fine("MSDA k8s audit onPost: trigger ConfigProcessor onPost ");
-                } catch (err) {
-                    logger.fine("MSDA k8s audit onPost: Failed to send out restOperation. ", err.message);
-                }
-            } else {
-                logger.fine("MSDA k8s audit onPost: ConfigProcessor is on polling state, will set msdaOnPolling status to TRUE.");
-                logger.fine("MSDA k8s audit onPost: ConfigProcessor is on polling state, no need to fire an onPost.");
-                msdaOnPolling = true;
-            }
-        });
+        logger.fine("MSDA K8S Audit: msdak8sOnpolling: ", global.msdak8sOnPolling);
+        logger.fine("MSDA K8S Audit: msdak8s poolName: ", blockInputProperties.poolName.value);
+        if (global.msdak8sOnPolling.includes(blockInputProperties.poolName.value)) {
+          msdaOnPolling = true;
+          logger.fine(
+            "MSDA k8s audit onPost: ConfigProcessor is on polling state, no need to fire an onPost."
+          );
+        } else {
+          logger.fine(
+            "MSDA k8s audit onPost: ConfigProcessor is NOT on polling state, will trigger ConfigProcessor onPost."
+          );
+          try {
+            var poolNameObject = getObjectByID(
+              "poolName",
+              auditTaskState.currentInputProperties
+            );
+            poolNameObject.value = null;
+            oThis.finishOperation(restOperation, auditTaskState);
+            logger.fine(
+              "MSDA k8s audit onPost: trigger ConfigProcessor onPost "
+            );
+          } catch (err) {
+            logger.fine(
+              "MSDA k8s audit onPost: Failed to send out restOperation. ",
+              err.message
+            );
+          }
+        }
     } catch (ex) {
         logger.fine("msdak8sEnforceConfiguredAuditProcessor.prototype.onPost caught generic exception " + ex);
         restOperation.fail(ex);
