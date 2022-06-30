@@ -349,11 +349,6 @@ msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
     // device, setup remote hostname, HTTPS port and device group name
     // to be used for identified requests
 
-    // Delete the polling signal
-    let signalIndex = global.msdak8sOnPolling.indexOf(inputProperties.poolName.value);
-    global.msdak8sOnPolling.splice(signalIndex,1);
-
-
     // Use tmsh to update configuration
 
     mytmsh.executeCommand("tmsh -a list ltm pool " + inputProperties.poolName.value)
@@ -377,8 +372,14 @@ msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
             logger.fine("MSDA: onDelete, Delete failed, setting block to ERROR: " + error.message);
             configTaskUtil.sendPatchToErrorState(configTaskState, error,
                 oThis.getUri().href, restOperation.getBasicAuthorization());
+        })
+            // Always called, no matter the disposition. Also handles re-throwing internal exceptions.
+        .done(function () {
+            logger.fine("MSDA: onDelete, delete DONE!!! Continue to clear the polling signal.");  // happens regardless of errors or no errors ....
+            // Delete the polling signal
+            let signalIndex = global.msdak8sOnPolling.indexOf(inputProperties.poolName.value);
+            global.msdak8sOnPolling.splice(signalIndex,1);
         });
-        // Always called, no matter the disposition. Also handles re-throwing internal exceptions.
 
 /*        // Stop polling registry while undeploy ??
     process.nextTick(() => {

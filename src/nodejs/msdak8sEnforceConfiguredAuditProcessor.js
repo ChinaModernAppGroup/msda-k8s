@@ -27,7 +27,7 @@ var fs = require('fs');
 
 // Setup a signal for onpolling status. It has an initial state "false".
 //const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
-var msdaOnPolling = false;
+//var msdaOnPolling = false;
 
 
 function msdak8sEnforceConfiguredAuditProcessor() {
@@ -90,11 +90,11 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         
         // Check the polling state, trigger ConfigProcessor if needed.
         // Move the signal checking here
-        logger.fine('MSDA K8S Audit: msdaOnpolling: ', msdaOnPolling);
+        //logger.fine('MSDA K8S Audit: msdaOnpolling: ', msdaOnPolling);
         logger.fine("MSDA K8S Audit: msdak8sOnpolling: ", global.msdak8sOnPolling);
         logger.fine("MSDA K8S Audit: msdak8s poolName: ", blockInputProperties.poolName.value);
         if (global.msdak8sOnPolling.includes(blockInputProperties.poolName.value)) {
-          msdaOnPolling = true;
+          //msdaOnPolling = true;
           logger.fine(
             "MSDA k8s audit onPost: ConfigProcessor is on polling state, no need to fire an onPost."
           );
