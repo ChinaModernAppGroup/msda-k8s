@@ -26,7 +26,7 @@ var blockUtil = require("./blockUtils");
 var logger = require('f5-logger').getInstance();
 var mytmsh = require('./TmshUtil');
 var K8s = require('k8s');
-var fs = require('fs');
+//var fs = require('fs');
 
 // Setup a pooling signal for audit.
 //const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
