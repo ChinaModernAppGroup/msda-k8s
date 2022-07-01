@@ -23,7 +23,7 @@ var q = require("q");
 
 var blockUtil = require("./blockUtils");
 var logger = require("f5-logger").getInstance();
-var fs = require('fs');
+//var fs = require('fs');
 
 // Setup a signal for onpolling status. It has an initial state "false".
 //const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
