@@ -69,11 +69,12 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onStart = function (success) {
 // Populate auditTaskState.currentInputProperties with the values on the device.
 // In ENFORCE_CONFIGURED, ignore the found configuration is on the BigIP.
 msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperation) {
-    entryCounter++;
-    logger.fine(getLogHeader() + "MSDA Audit onPost: START");
-    var oThis = this;
-    var auditTaskState = restOperation.getBody();
-
+  entryCounter++;
+  logger.fine(getLogHeader() + "MSDA Audit onPost: START");
+  var oThis = this;
+  var auditTaskState = restOperation.getBody();
+  
+  setTimeout(function () {
     try {
         if (!auditTaskState ) {
             throw new Error("AUDIT: Audit task state must exist ");
@@ -123,6 +124,7 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         logger.fine("msdak8sEnforceConfiguredAuditProcessor.prototype.onPost caught generic exception " + ex);
         restOperation.fail(ex);
     }
+  }, 1000)
 };
 
 var getObjectByID = function ( key, array) {
