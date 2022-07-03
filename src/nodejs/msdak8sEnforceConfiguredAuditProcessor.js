@@ -23,11 +23,11 @@ var q = require("q");
 
 var blockUtil = require("./blockUtils");
 var logger = require("f5-logger").getInstance();
-var fs = require('fs');
+//var fs = require('fs');
 
 // Setup a signal for onpolling status. It has an initial state "false".
 //const msdak8sOnPollingSignal = '/var/tmp/msdak8sOnPolling';
-var msdaOnPolling = false;
+//var msdaOnPolling = false;
 
 
 function msdak8sEnforceConfiguredAuditProcessor() {
@@ -69,11 +69,12 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onStart = function (success) {
 // Populate auditTaskState.currentInputProperties with the values on the device.
 // In ENFORCE_CONFIGURED, ignore the found configuration is on the BigIP.
 msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperation) {
-    entryCounter++;
-    logger.fine(getLogHeader() + "MSDA Audit onPost: START");
-    var oThis = this;
-    var auditTaskState = restOperation.getBody();
-
+  entryCounter++;
+  logger.fine(getLogHeader() + "MSDA Audit onPost: START");
+  var oThis = this;
+  var auditTaskState = restOperation.getBody();
+  
+  setTimeout(function () {
     try {
         if (!auditTaskState ) {
             throw new Error("AUDIT: Audit task state must exist ");
@@ -90,11 +91,11 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         
         // Check the polling state, trigger ConfigProcessor if needed.
         // Move the signal checking here
-        logger.fine('MSDA K8S Audit: msdaOnpolling: ', msdaOnPolling);
+        //logger.fine('MSDA K8S Audit: msdaOnpolling: ', msdaOnPolling);
         logger.fine("MSDA K8S Audit: msdak8sOnpolling: ", global.msdak8sOnPolling);
         logger.fine("MSDA K8S Audit: msdak8s poolName: ", blockInputProperties.poolName.value);
         if (global.msdak8sOnPolling.includes(blockInputProperties.poolName.value)) {
-          msdaOnPolling = true;
+          //msdaOnPolling = true;
           logger.fine(
             "MSDA k8s audit onPost: ConfigProcessor is on polling state, no need to fire an onPost."
           );
@@ -123,6 +124,7 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         logger.fine("msdak8sEnforceConfiguredAuditProcessor.prototype.onPost caught generic exception " + ex);
         restOperation.fail(ex);
     }
+  }, 1000)
 };
 
 var getObjectByID = function ( key, array) {
