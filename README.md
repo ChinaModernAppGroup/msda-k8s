@@ -4,7 +4,17 @@ This is an example of MSDA to work with Kubernetes. MSDA-k8s agent will poll k8s
 
 ## Build (requires rpmbuild)
 
+  Check the modules dependency:
+```bash
+    $ cd src/nodejs
+    $ npm list
+```
+  Fix all dependent modules with `npm install` command.
+  Go back to the root direct of the project, build an rpm package:
+```bash
+    $ cd ../..
     $ npm run build
+```
 
 Build output is an RPM package.
 
