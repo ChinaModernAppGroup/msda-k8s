@@ -13,13 +13,18 @@
   language governing permissions and limitations under the License.
 
   Updated by Ping Xiong on May/13/2022
-
+  Updated by Ping Xiong on Oct/04/2022, modify the polling signal into a json object to keep more information.
+  let blockInstance = {
+    name: "instanceName", // a block instance of the iapplx config
+    state: "polling", // can be "polling" for normal running state; "update" to modify the iapplx config
+    bigipPool: "/Common/samplePool"
+  }
 */
 
 'use strict';
 
 
-var q = require("q");
+//var q = require("q");
 
 var blockUtil = require("./blockUtils");
 var logger = require("f5-logger").getInstance();
@@ -86,7 +91,15 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         */
         var blockInputProperties = blockUtil.getMapFromPropertiesAndValidate(
             auditTaskState.currentInputProperties,
-            ["k8sEndpoint", "authenticationCert", "nameSpace", "serviceName", "poolName", "poolType", "healthMonitor"]
+            [
+              //"k8sEndpoint",
+              //"authenticationCert",
+              //"nameSpace",
+              //"serviceName",
+              "poolName"
+              //"poolType",
+              //"healthMonitor"
+            ]
         );
         
         // Check the polling state, trigger ConfigProcessor if needed.
@@ -94,37 +107,43 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         //logger.fine('MSDA K8S Audit: msdaOnpolling: ', msdaOnPolling);
         logger.fine("MSDA K8S Audit: msdak8sOnpolling: ", global.msdak8sOnPolling);
         logger.fine("MSDA K8S Audit: msdak8s poolName: ", blockInputProperties.poolName.value);
-        if (global.msdak8sOnPolling.includes(blockInputProperties.poolName.value)) {
-          //msdaOnPolling = true;
+        if (
+            global.msdak8sOnPolling.some(
+              (instance) =>
+                instance.bigipPool === blockInputProperties.poolName.value
+            )
+        ) {
           logger.fine(
-            "MSDA k8s audit onPost: ConfigProcessor is on polling state, no need to fire an onPost."
-          );
+                "MSDA k8s audit onPost: ConfigProcessor is on polling state, no need to fire an onPost.",
+                blockInputProperties.poolName.value
+            );
         } else {
-          logger.fine(
-            "MSDA k8s audit onPost: ConfigProcessor is NOT on polling state, will trigger ConfigProcessor onPost."
-          );
-          try {
-            var poolNameObject = getObjectByID(
-              "poolName",
-              auditTaskState.currentInputProperties
-            );
-            poolNameObject.value = null;
-            oThis.finishOperation(restOperation, auditTaskState);
             logger.fine(
-              "MSDA k8s audit onPost: trigger ConfigProcessor onPost "
+                "MSDA k8s audit onPost: ConfigProcessor is NOT on polling state, will trigger ConfigProcessor onPost.",
+                blockInputProperties.poolName.value
             );
-          } catch (err) {
-            logger.fine(
-              "MSDA k8s audit onPost: Failed to send out restOperation. ",
-              err.message
-            );
-          }
+            try {
+                var poolNameObject = getObjectByID(
+                  "poolName",
+                  auditTaskState.currentInputProperties
+                );
+                poolNameObject.value = null;
+                oThis.finishOperation(restOperation, auditTaskState);
+                logger.fine(
+                  "MSDA k8s audit onPost: trigger ConfigProcessor onPost "
+                );
+            } catch (err) {
+                logger.fine(
+                    "MSDA k8s audit onPost: Failed to send out restOperation. ",
+                    err.message
+                );
+              }
         }
     } catch (ex) {
         logger.fine("msdak8sEnforceConfiguredAuditProcessor.prototype.onPost caught generic exception " + ex);
         restOperation.fail(ex);
     }
-  }, 1000)
+  }, 2000)
 };
 
 var getObjectByID = function ( key, array) {
