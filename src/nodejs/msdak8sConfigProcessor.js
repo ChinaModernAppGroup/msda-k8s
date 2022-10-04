@@ -310,7 +310,7 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
                         );
                     } else {
                         //logger.fine("MSDA: onPost/polling, " + instanceName + " update config, a new polling loop.");
-                        global.msdak8sOnPolling[signalIndex].state === "polling";
+                        global.msdak8sOnPolling[signalIndex].state = "polling";
                         logger.fine(
                             "MSDA: onPost/polling, " +
                             instanceName +
