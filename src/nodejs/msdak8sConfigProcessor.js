@@ -549,8 +549,7 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
  * @param restOperation - originating rest operation that triggered this processor
  */
 msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
-    var configTaskState,
-        blockState;
+    var configTaskState, blockState;
     var oThis = this;
 
     logger.fine("MSDA: onDelete, msdak8sConfigProcessor.prototype.onDelete");
@@ -558,10 +557,13 @@ msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
     var instanceName;
     var inputProperties;
     try {
-        configTaskState = configTaskUtil.getAndValidateConfigTaskState(restOperation);
+        configTaskState =
+        configTaskUtil.getAndValidateConfigTaskState(restOperation);
         blockState = configTaskState.block;
-        inputProperties = blockUtil.getMapFromPropertiesAndValidate(blockState.inputProperties,
-            ["poolName", "poolType"]);
+        inputProperties = blockUtil.getMapFromPropertiesAndValidate(
+        blockState.inputProperties,
+        ["poolName", "poolType"]
+        );
         instanceName = blockState.name;
     } catch (ex) {
         restOperation.fail(ex);
@@ -573,45 +575,61 @@ msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
     var uri = this.restHelper.buildUri({
         protocol: this.wellKnownPorts.DEFAULT_HTTP_SCHEME,
         port: this.wellKnownPorts.DEFAULT_JAVA_SERVER_PORT,
-        hostname: "localhost"
+        hostname: "localhost",
     });
 
     // In case user requested configuration to deployed to remote
     // device, setup remote hostname, HTTPS port and device group name
     // to be used for identified requests
 
+    // Delete the polling signal first, then remove the pool in big-ip
+    let signalIndex = global.msdak8sOnPolling.findIndex(
+      (instance) => instance.name === instanceName
+    );
+    global.msdak8sOnPolling.splice(signalIndex, 1);
+    logger.fine(
+        "MSDA: onDelete, " +
+        instanceName +
+        " deleted polling signal!!! Continue to remove the pool in bigip."
+    );
     // Use tmsh to update configuration
 
-    mytmsh.executeCommand("tmsh -a list ltm pool " + inputProperties.poolName.value)
-        .then(function () {
+    mytmsh
+        .executeCommand("tmsh -a list ltm pool " + inputProperties.poolName.value)
+        .then(
+        function () {
             logger.fine(
-                "MSDA: onDelete, " +
+            "MSDA: onDelete, " +
                 instanceName +
                 " Found a pre-existing pool. Full Config Delete: ",
-                inputProperties.poolName.value
+            inputProperties.poolName.value
             );
-            const commandDeletePool = 'tmsh -a delete ltm pool ' + inputProperties.poolName.value;
-            return mytmsh.executeCommand(commandDeletePool)
-                .then (function (response) {
-                    logger.fine(
-                        "MSDA: onDelete, " +
-                        instanceName +
-                        " The pool is all removed: ",
-                        inputProperties.poolName.value
-                    );
-                    configTaskUtil.sendPatchToUnBoundState(configTaskState,
-                        oThis.getUri().href, restOperation.getBasicAuthorization());
-                    });
+            const commandDeletePool =
+            "tmsh -a delete ltm pool " + inputProperties.poolName.value;
+            return mytmsh
+            .executeCommand(commandDeletePool)
+            .then(function (response) {
+                logger.fine(
+                "MSDA: onDelete, " + instanceName + " The pool is all removed: ",
+                inputProperties.poolName.value
+                );
+                configTaskUtil.sendPatchToUnBoundState(
+                configTaskState,
+                oThis.getUri().href,
+                restOperation.getBasicAuthorization()
+                );
+            });
         }, function (error) {
             // the configuration must be clean. Nothing to delete
             logger.fine(
-                "MSDA: onDelete, " +
-                instanceName +
-                " pool does't exist: ",
-                error.message
+            "MSDA: onDelete, " + instanceName + " pool does't exist: ",
+            error.message
             );
-            configTaskUtil.sendPatchToUnBoundState(configTaskState, 
-                oThis.getUri().href, restOperation.getBasicAuthorization());
+            configTaskUtil.sendPatchToUnBoundState(
+            configTaskState,
+            oThis.getUri().href,
+            restOperation.getBasicAuthorization()
+            );
         })
         // Error handling - Set the block as 'ERROR'
         .catch(function (error) {
@@ -621,36 +639,40 @@ msdak8sConfigProcessor.prototype.onDelete = function (restOperation) {
                 " Delete failed, setting block to ERROR: ",
                 error.message
             );
-            configTaskUtil.sendPatchToErrorState(configTaskState, error,
-                oThis.getUri().href, restOperation.getBasicAuthorization());
+            configTaskUtil.sendPatchToErrorState(
+                configTaskState,
+                error,
+                oThis.getUri().href,
+                restOperation.getBasicAuthorization()
+            );
         })
-            // Always called, no matter the disposition. Also handles re-throwing internal exceptions.
+        // Always called, no matter the disposition. Also handles re-throwing internal exceptions.
         .done(function () {
             logger.fine(
                 "MSDA: onDelete, " +
                 instanceName +
-                " delete DONE!!! Continue to clear the polling signal."
-            );  // happens regardless of errors or no errors ....
+                " Bigip configuration delete DONE!!!"
+            ); // happens regardless of errors or no errors ....
             // Delete the polling signal
-            let signalIndex = global.msdak8sOnPolling.findIndex(
-              (instance) => instance.name === instanceName
-            );
-            global.msdak8sOnPolling.splice(signalIndex,1);
+            //let signalIndex = global.msdak8sOnPolling.findIndex(
+            //    (instance) => instance.name === instanceName
+            //);
+            //global.msdak8sOnPolling.splice(signalIndex, 1);
         });
 
-/*        // Stop polling registry while undeploy ??
-    process.nextTick(() => {
-        stopPolling = true;
-        logger.fine("MSDA: onDelete/stopping, Stop polling registry ...");
-    });
-    //stopPollingEvent.emit('stopPollingRegistry');
-    
-    logger.fine(
-        "MSDA: onDelete, DONE!!! " +
-        instanceName +
-        " Stop polling Registry while ondelete action."
-    );
-    */
+        /*        // Stop polling registry while undeploy ??
+        process.nextTick(() => {
+            stopPolling = true;
+            logger.fine("MSDA: onDelete/stopping, Stop polling registry ...");
+        });
+        //stopPollingEvent.emit('stopPollingRegistry');
+        
+        logger.fine(
+            "MSDA: onDelete, DONE!!! " +
+            instanceName +
+            " Stop polling Registry while ondelete action."
+        );
+        */
 };
 
 module.exports = msdak8sConfigProcessor;
