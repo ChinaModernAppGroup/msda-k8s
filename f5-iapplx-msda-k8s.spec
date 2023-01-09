@@ -1,7 +1,7 @@
 Summary: F5 Basic iApp
 Name: f5-iapplx-msda-k8s
 Version: 0.0.5
-Release: 0001
+Release: 0002
 BuildArch: noarch
 Group: Development/Libraries
 License: Commercial

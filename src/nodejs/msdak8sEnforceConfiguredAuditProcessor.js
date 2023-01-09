@@ -79,7 +79,7 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
   var oThis = this;
   var auditTaskState = restOperation.getBody();
   
-  setTimeout(function () {
+  //setTimeout(function () {
     try {
         if (!auditTaskState ) {
             throw new Error("AUDIT: Audit task state must exist ");
@@ -143,7 +143,7 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         logger.fine("msdak8sEnforceConfiguredAuditProcessor.prototype.onPost caught generic exception " + ex);
         restOperation.fail(ex);
     }
-  }, 2000)
+  //}, 2000)
 };
 
 var getObjectByID = function ( key, array) {
