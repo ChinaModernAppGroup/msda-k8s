@@ -105,22 +105,31 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
         // Check the polling state, trigger ConfigProcessor if needed.
         // Move the signal checking here
         //logger.fine('MSDA K8S Audit: msdaOnpolling: ', msdaOnPolling);
-        logger.fine("MSDA K8S Audit: msdak8sOnpolling: ", global.msdak8sOnPolling);
-        logger.fine("MSDA K8S Audit: msdak8s poolName: ", blockInputProperties.poolName.value);
+        logger.fine(
+          getLogHeader() + "MSDA K8S Audit: msdak8sOnpolling: ",
+          global.msdak8sOnPolling
+        );
+        logger.fine(
+          getLogHeader() + "MSDA K8S Audit: msdak8s poolName: ",
+          blockInputProperties.poolName.value
+        );
         if (
             global.msdak8sOnPolling.some(
               (instance) =>
                 instance.bigipPool === blockInputProperties.poolName.value
             )
         ) {
-          logger.fine(
+            logger.fine(
+                getLogHeader() +
                 "MSDA k8s audit onPost: ConfigProcessor is on polling state, no need to fire an onPost.",
                 blockInputProperties.poolName.value
             );
+            oThis.finishOperation(restOperation, auditTaskState);
         } else {
             logger.fine(
+              getLogHeader() +
                 "MSDA k8s audit onPost: ConfigProcessor is NOT on polling state, will trigger ConfigProcessor onPost.",
-                blockInputProperties.poolName.value
+              blockInputProperties.poolName.value
             );
             try {
                 var poolNameObject = getObjectByID(
@@ -130,17 +139,23 @@ msdak8sEnforceConfiguredAuditProcessor.prototype.onPost = function (restOperatio
                 poolNameObject.value = null;
                 oThis.finishOperation(restOperation, auditTaskState);
                 logger.fine(
-                  "MSDA k8s audit onPost: trigger ConfigProcessor onPost "
+                  getLogHeader() +
+                    "MSDA k8s audit onPost: trigger ConfigProcessor onPost "
                 );
             } catch (err) {
                 logger.fine(
+                  getLogHeader() +
                     "MSDA k8s audit onPost: Failed to send out restOperation. ",
-                    err.message
+                  err.message
                 );
               }
         }
     } catch (ex) {
-        logger.fine("msdak8sEnforceConfiguredAuditProcessor.prototype.onPost caught generic exception " + ex);
+        logger.fine(
+          getLogHeader() +
+            "msdak8sEnforceConfiguredAuditProcessor.prototype.onPost caught generic exception " +
+            ex
+        );
         restOperation.fail(ex);
     }
   //}, 2000)
