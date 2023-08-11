@@ -20,10 +20,12 @@
   let blockInstance = {
     name: "instanceName", // a block instance of the iapplx config
     state: "polling", // can be "polling" for normal running state; "update" to modify the iapplx config
+    bigipPoolChange: false, // Add a signal for bigip pool change update
     bigipPool: "/Common/samplePool"
   }
   Updated by Ping Xiong on Jan/08/2023, compare pool member list before update config.
   Mar/09/2023, updated by Ping Xiong, update delta of pool members instead of replace-all-with latest config.
+  Aug/11/2023, updated by Ping Xiong, update config will not delete the pool unless the pool changed.
 */
 
 'use strict';
@@ -231,11 +233,17 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
     let blockInstance = {
         name: instanceName,
         bigipPool: inputPoolName,
+        // Add signal for bigip pool change update
+        bigipPoolChange: false,
         state: "polling"
     };
 
     let signalIndex = global.msdak8sOnPolling.findIndex(instance => instance.name === instanceName);
     if (signalIndex !== -1) {
+        //Already has the instance, set the pool change signal if the pool changed
+        blockInstance.bigipPoolChange =
+            global.msdak8sOnPolling[signalIndex].bigipPool !== inputPoolName;
+        
         // Already has the instance, change the state into "update"
         global.msdak8sOnPolling.splice(signalIndex, 1);
         blockInstance.state = "update";
@@ -577,6 +585,7 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
             let signalIndex = global.msdak8sOnPolling.findIndex(
                 (instance) => instance.name === instanceName
             );
+        
             if (global.msdak8sOnPolling[signalIndex].state === "polling") {
                 logger.fine(
                     "MSDA: onPost, " +
@@ -613,35 +622,56 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
                     inputServiceName
                 );
             });
-            // Delete pool configuration in case it still there.
-            setTimeout (function () {
-                const commandDeletePool = 'tmsh -a delete ltm pool ' + inputPoolName;
-                mytmsh.executeCommand(commandDeletePool)
-                .then (function () {
+            
+            // Delete pool configuration if the pool name changed.
+
+            if (
+                global.msdak8sOnPolling.some(
+                    (instance) => instance.name === instanceName
+                )
+            ) {
+                let signalIndex = global.msdak8sOnPolling.findIndex(
+                    (instance) => instance.name === instanceName
+                );
+                if (global.msdak8sOnPolling[signalIndex].bigipPoolChange === true) {
                     logger.fine(
-                        "MSDA: onPost/stopping, " +
+                    "MSDA: onPost, " +
                         instanceName +
-                        " the pool removed: " +
-                        inputPoolName
+                        " BigipPool Changed, will delete previous pool for : ",
+                    inputServiceName
                     );
-                })
-                    // Error handling
-                .catch(function (err) {
-                    logger.fine(
-                        "MSDA: onPost/stopping, " +
-                        instanceName +
-                        " Delete failed: " +
-                        inputPoolName,
-                        err.message
-                    );
-                }).done(function () {
-                    return logger.fine(
-                        "MSDA: onPost/stopping, " +
-                        instanceName +
-                        " exit loop."
-                    );
-                });
-            }, 2000);
+
+                    setTimeout (function () {
+                        const commandDeletePool = 'tmsh -a delete ltm pool ' + inputPoolName;
+                        mytmsh.executeCommand(commandDeletePool)
+                        .then (function () {
+                            logger.fine(
+                                "MSDA: onPost/stopping, " +
+                                instanceName +
+                                " the pool removed: " +
+                                inputPoolName
+                            );
+                        })
+                            // Error handling
+                        .catch(function (err) {
+                            logger.fine(
+                                "MSDA: onPost/stopping, " +
+                                instanceName +
+                                " Delete failed: " +
+                                inputPoolName,
+                                err.message
+                            );
+                        }).done(function () {
+                            global.msdak8sOnPolling[signalIndex].bigipPoolChange = false;
+                            return logger.fine(
+                                "MSDA: onPost/stopping, " +
+                                instanceName +
+                                " exit loop."
+                            );
+                        });
+                    }, 2000);
+                };
+            }          
         }
     })();
 };
