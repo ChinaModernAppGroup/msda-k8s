@@ -231,11 +231,17 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
     let blockInstance = {
         name: instanceName,
         bigipPool: inputPoolName,
+        // Add signal for bigip pool change update
+        bigipPoolChange: false,
         state: "polling"
     };
 
     let signalIndex = global.msdak8sOnPolling.findIndex(instance => instance.name === instanceName);
     if (signalIndex !== -1) {
+        //Already has the instance, set the pool change signal if the pool changed
+        blockInstance.bigipPoolChange =
+            global.msdak8sOnPolling[signalIndex].bigipPool !== inputPoolName;
+        
         // Already has the instance, change the state into "update"
         global.msdak8sOnPolling.splice(signalIndex, 1);
         blockInstance.state = "update";
@@ -568,6 +574,7 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
 
         // stop polling while undeployment or update the config
         let stopPolling = true;
+        let deleteBigipPool = false;
 
         if (
             global.msdak8sOnPolling.some(
@@ -577,6 +584,12 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
             let signalIndex = global.msdak8sOnPolling.findIndex(
                 (instance) => instance.name === instanceName
             );
+
+            if (global.msdak8sOnPolling[signalIndex].bigipPoolChange === true) {
+                deleteBigipPool = true;
+            };
+
+
             if (global.msdak8sOnPolling[signalIndex].state === "polling") {
                 logger.fine(
                     "MSDA: onPost, " +
@@ -613,35 +626,38 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
                     inputServiceName
                 );
             });
-            // Delete pool configuration in case it still there.
-            setTimeout (function () {
-                const commandDeletePool = 'tmsh -a delete ltm pool ' + inputPoolName;
-                mytmsh.executeCommand(commandDeletePool)
-                .then (function () {
-                    logger.fine(
-                        "MSDA: onPost/stopping, " +
-                        instanceName +
-                        " the pool removed: " +
-                        inputPoolName
-                    );
-                })
-                    // Error handling
-                .catch(function (err) {
-                    logger.fine(
-                        "MSDA: onPost/stopping, " +
-                        instanceName +
-                        " Delete failed: " +
-                        inputPoolName,
-                        err.message
-                    );
-                }).done(function () {
-                    return logger.fine(
-                        "MSDA: onPost/stopping, " +
-                        instanceName +
-                        " exit loop."
-                    );
-                });
-            }, 2000);
+            
+            // Delete pool configuration if the pool name changed.
+            if (deleteBigipPool) {
+                setTimeout (function () {
+                    const commandDeletePool = 'tmsh -a delete ltm pool ' + inputPoolName;
+                    mytmsh.executeCommand(commandDeletePool)
+                    .then (function () {
+                        logger.fine(
+                            "MSDA: onPost/stopping, " +
+                            instanceName +
+                            " the pool removed: " +
+                            inputPoolName
+                        );
+                    })
+                        // Error handling
+                    .catch(function (err) {
+                        logger.fine(
+                            "MSDA: onPost/stopping, " +
+                            instanceName +
+                            " Delete failed: " +
+                            inputPoolName,
+                            err.message
+                        );
+                    }).done(function () {
+                        return logger.fine(
+                            "MSDA: onPost/stopping, " +
+                            instanceName +
+                            " exit loop."
+                        );
+                    });
+                }, 2000);
+            }            
         }
     })();
 };
