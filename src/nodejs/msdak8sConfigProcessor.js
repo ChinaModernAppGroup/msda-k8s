@@ -587,6 +587,7 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
 
             if (global.msdak8sOnPolling[signalIndex].bigipPoolChange === true) {
                 deleteBigipPool = true;
+                global.msdak8sOnPolling[signalIndex].bigipPoolChange = false;
             };
 
 
