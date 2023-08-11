@@ -20,10 +20,12 @@
   let blockInstance = {
     name: "instanceName", // a block instance of the iapplx config
     state: "polling", // can be "polling" for normal running state; "update" to modify the iapplx config
+    bigipPoolChange: false, // Add a signal for bigip pool change update
     bigipPool: "/Common/samplePool"
   }
   Updated by Ping Xiong on Jan/08/2023, compare pool member list before update config.
   Mar/09/2023, updated by Ping Xiong, update delta of pool members instead of replace-all-with latest config.
+  Aug/11/2023, updated by Ping Xiong, update config will not delete the pool unless the pool changed.
 */
 
 'use strict';
