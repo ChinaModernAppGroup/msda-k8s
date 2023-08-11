@@ -183,12 +183,10 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
     // Check the existence of the pool in BIG-IP, create an empty pool if the pool doesn't exist.
     mytmsh.executeCommand("tmsh -a list ltm pool " + inputPoolName)
     .then(function () {
-        logger.fine(
-            "MSDA: onPost, " +
-            instanceName +
-            " found the pool, no need to create an empty pool."
-        );
-        return;
+        logger.fine("MSDA: onPost, " + instanceName + " found the pool, update pool configure.");
+        let inputExistingPoolConfig = inputPoolName + ' monitor ' + inputMonitor + ' load-balancing-mode ' + inputPoolType;
+        let commandModifyPool = 'tmsh -a modify ltm pool ' + inputExistingPoolConfig;
+        return mytmsh.executeCommand(commandModifyPool);
     }, function (error) {
         logger.fine(
             "MSDA: onPost, " +
