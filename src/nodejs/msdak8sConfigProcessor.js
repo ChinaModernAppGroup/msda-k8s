@@ -574,7 +574,6 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
 
         // stop polling while undeployment or update the config
         let stopPolling = true;
-        let deleteBigipPool = false;
 
         if (
             global.msdak8sOnPolling.some(
@@ -584,13 +583,7 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
             let signalIndex = global.msdak8sOnPolling.findIndex(
                 (instance) => instance.name === instanceName
             );
-
-            if (global.msdak8sOnPolling[signalIndex].bigipPoolChange === true) {
-                deleteBigipPool = true;
-                global.msdak8sOnPolling[signalIndex].bigipPoolChange = false;
-            };
-
-
+        
             if (global.msdak8sOnPolling[signalIndex].state === "polling") {
                 logger.fine(
                     "MSDA: onPost, " +
@@ -629,36 +622,54 @@ msdak8sConfigProcessor.prototype.onPost = function (restOperation) {
             });
             
             // Delete pool configuration if the pool name changed.
-            if (deleteBigipPool) {
-                setTimeout (function () {
-                    const commandDeletePool = 'tmsh -a delete ltm pool ' + inputPoolName;
-                    mytmsh.executeCommand(commandDeletePool)
-                    .then (function () {
-                        logger.fine(
-                            "MSDA: onPost/stopping, " +
-                            instanceName +
-                            " the pool removed: " +
-                            inputPoolName
-                        );
-                    })
-                        // Error handling
-                    .catch(function (err) {
-                        logger.fine(
-                            "MSDA: onPost/stopping, " +
-                            instanceName +
-                            " Delete failed: " +
-                            inputPoolName,
-                            err.message
-                        );
-                    }).done(function () {
-                        return logger.fine(
-                            "MSDA: onPost/stopping, " +
-                            instanceName +
-                            " exit loop."
-                        );
-                    });
-                }, 2000);
-            }            
+
+            if (
+                global.msdak8sOnPolling.some(
+                    (instance) => instance.name === instanceName
+                )
+            ) {
+                let signalIndex = global.msdak8sOnPolling.findIndex(
+                    (instance) => instance.name === instanceName
+                );
+                if (global.msdak8sOnPolling[signalIndex].bigipPoolChange === true) {
+                    logger.fine(
+                    "MSDA: onPost, " +
+                        instanceName +
+                        " BigipPool Changed, will delete previous pool for : ",
+                    inputServiceName
+                    );
+
+                    setTimeout (function () {
+                        const commandDeletePool = 'tmsh -a delete ltm pool ' + inputPoolName;
+                        mytmsh.executeCommand(commandDeletePool)
+                        .then (function () {
+                            logger.fine(
+                                "MSDA: onPost/stopping, " +
+                                instanceName +
+                                " the pool removed: " +
+                                inputPoolName
+                            );
+                        })
+                            // Error handling
+                        .catch(function (err) {
+                            logger.fine(
+                                "MSDA: onPost/stopping, " +
+                                instanceName +
+                                " Delete failed: " +
+                                inputPoolName,
+                                err.message
+                            );
+                        }).done(function () {
+                            global.msdak8sOnPolling[signalIndex].bigipPoolChange = false;
+                            return logger.fine(
+                                "MSDA: onPost/stopping, " +
+                                instanceName +
+                                " exit loop."
+                            );
+                        });
+                    }, 2000);
+                };
+            }          
         }
     })();
 };
